@@ -7,43 +7,55 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
     const { username, password } = req.body;
+
     const user = await UserModel.findOne({ username });
+    if (user) {
+        res.status(400).json({ message: 'User already exists' });
+        return;
+    }
 
-    res.json({user})
-  
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-
-
-
-    
-});
-
-router.post('/getUsers', async (req, res) => {
-    const users = await UserModel.find({});
-    res.json(users);
-}
-);
-
-router.post('/insertUser', async (req, res) => {
-    const { username, password } = req.body;
-
-    const newUser = new UserModel({ username, password });
+    const newUser = new UserModel({ username, password: hashedPassword });
     await newUser.save();
 
     res.json(newUser);
+});
+
+
+
+router.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+    const user = await UserModel.findOne({ username });
+    if (!user) {
+        res.status(400).json({ message: 'User does not exist' });
+        return;
+    }
+
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+        res.status(400).json({ message: 'Invalid password' });
+        return;
+    }
+
+    const token = jwt.sign(
+        {
+            id: user._id,
+            username: user.username,
+        },
+        "secret",
+    );
+        
+    res.json({ token , user});
+});
+
+
+
+
+
     
-}
-);
-    
-
-
-router.post('getUsers', async (req, res) => {
-    const users = await UserModel.find({});
-    res.json(users);
-}
-);
-   
-
 
 
 export { router as usersRouter};
