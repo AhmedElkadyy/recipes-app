@@ -1,12 +1,14 @@
 import RecipeModel from "../models/Recipes";
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt'; 
+import bcrypt from 'bcrypt';
+import UserModel from '../models/Users.js';
 
 
 
 
 const router = express.Router();
+
 
 
 
@@ -16,34 +18,38 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-    const { name, ingredients, instructions, imageUrl, cookingTime } = req.body;
-
+    const { name, ingredients, instructions, imageUrl, cookingTime,userOwner } = req.body;
    
-    const newRecipe = new RecipeModel({ name , ingredients, instructions, imageUrl, cookingTime, userOwner:"60b9b0b0e1b0c71f1c0b0b1e" });
+    const newRecipe = new RecipeModel({ name , ingredients, instructions, imageUrl, cookingTime, userOwner});
 
     await newRecipe.save();
     res.json(newRecipe);
 });
+router.put('/', async (req, res) => {
+  const { recipeId, userId } = req.body;
 
-router.put('', async (req, res) => {
-   
-    const recipe = await RecipeModel.findById(req.body.recipeId);
-    const user = await UserModel.findById(req.body.userId);
+  try {
+    const recipe = await RecipeModel.findById(recipeId);
+    const user = await UserModel.findById(userId);
 
+    if (!recipe || !user) {
+      return res.status(404).json({ error: 'Recipe or user not found' });
+    }
 
     user.savedRecipes.push(recipe);
     await user.save();
-    res.json({savedRecipes: user.savedRecipes});
 
-
-
-
- 
+    res.json({ savedRecipes: user.savedRecipes });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
+  
 
 
-router.get('/saved/ids', async (req, res) => {
+router.get('/saved/ids:userId', async (req, res) => {
     
     const user = await UserModel.findById(req.body.userId)
     res.json({savedRecipes: user?.savedRecipes});
